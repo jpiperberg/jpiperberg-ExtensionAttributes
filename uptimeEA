@@ -1,0 +1,24 @@
+#!/bin/sh
+
+currentDateTime=$(date "+%F at %H:%M%p")
+
+timeSinceLastReboot=$(uptime)
+upLongerThan1Day=$(echo $timeSinceLastReboot | grep "days")
+
+if [[ $(echo $timeSinceLastReboot | grep "days") != "" ]]; then
+
+	# format uptime string based on days of uptime
+	days=$(echo $timeSinceLastReboot | awk '{print $3}')
+	hoursMinutes=$(echo $timeSinceLastReboot | awk '{print $5}' | sed 's/,//g' | awk  'BEGIN {FS=":"}; {print $1 " hours and " $2 " minutes"}')
+
+	echo "<result>up $days days, $hoursMinutes as of $currentDateTime</result>"
+
+
+else
+	# up less than 1 day
+	# format uptime string based on hours of uptime
+	hoursMinutes=$(echo $timeSinceLastReboot | awk '{print $3}' | sed 's/,//g' | awk  'BEGIN {FS=":"}; {print $1 " hours and " $2 " minutes"}')
+
+	echo "<result>up $hoursMinutes as of $currentDateTime</result>"
+fi
+
