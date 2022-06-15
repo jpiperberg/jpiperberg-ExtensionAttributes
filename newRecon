@@ -1,0 +1,42 @@
+# Recon Monterey replacement
+set confirmValues to false
+repeat while confirmValues is false
+  display dialog "Please enter the username for the primary user of this computer" default answer ""
+  set theUsername to text returned of result
+  # get values for computer Type
+  do shell script "/usr/local/bin/jamf policy -trigger theNewRecon -p0 getValues -p1 2" with administrator privileges
+  set eaName to do shell script "cat /tmp/jamf/eaName.txt"
+  set eaValues to {}
+  set theFile to paragraphs of (read POSIX file "/tmp/jamf/formattedChoices.txt")
+  repeat with nextLine in theFile
+    if length of nextLine is greater than 1 then
+      copy nextLine to the end of eaValues
+    end if
+  end repeat
+  set eaValue to choose from list eaValues with prompt "Select " & eaName & ":"
+
+  try
+    set sys_serial to do shell script "system_profiler SPHardwareDataType | grep \"Serial Number\" | cut -d':' -f2"
+  on error
+    repeat while serial_correct is false
+    # probably had a logic board replacement
+    display dialog "The serial number was not correctly reported.  Please reenter the serial number" default answer "Serial Number" buttons "OK" default button 1
+    set sys_serial to text returned of result
+      display dialog "The serial number has been reported as " & sys_serial & ". Is this correct?" buttons {"Yes", "No"} default button 1
+     if button returned of result is "Yes" then
+       set serial_correct to true
+     end if
+   end repeat
+  end try
+
+  display dialog "We will now set the user to " & theUsername & " and the " & eaName & " to " & eaValue buttons {"OK", "Whoops"} default button "OK"
+  set confirmed to button returned of result
+  if confirmed is "OK" then
+    do shell script "/usr/local/bin/jamf recon -endUsername " & theUsername with administrator privileges
+    do shell script "/usr/local/bin/jamf policy -trigger theNewRecon -p0 setValue -p1 2 -p2 " & "\"" & eaValue & "\"" with administrator privileges
+   display dialog "values set, carry on"
+    set confirmValues to true
+  else
+    set confirmValues to false
+  end if
+end repeat
