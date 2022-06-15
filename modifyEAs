@@ -1,0 +1,172 @@
+#!/bin/sh
+# Adapted from https://www.modtitan.com/2018/01/reusable-script-for-updating-ea-values.html Thanks Emily!
+# custom parameters from 
+# https://raw.githubusercontent.com/kennyb-222/Jamf-Policy-CLI-Parameters/main/jamf_script_params.sh
+# via https://aporlebeke.wordpress.com/2021/03/23/running-jamf-scripts-with-custom-command-line-arguments-at-runtime-without-jamf-remote/
+# this was intially designed as the Recon app stopped being able to set Extension Attributes
+# We use machine type information to restrict access to software for licensing reasons
+# Many products have licenses only for academic/research use.
+# Setting the EAs manually within the JSS would be inconvenient for folks doing deployments
+
+# to get encoded API credentials:
+# echo -n 'apiuser:apipassword' | openssl base64
+encodedCredentials='encodedCreds/'
+authToken=""
+apiToken=""
+JSSURL="orgJSSServer.tld"
+sn=$(system_profiler SPHardwareDataType | grep system | awk '{print $4}') 
+api_authentication_check=401
+logFile=/tmp/EALog.txt
+eaName=""
+eaID=""
+eaValue=""
+
+getBearerToken () {
+# Use encoded username and password to request a token with an API call and store the output as a variable in a script:
+    authToken=$(/usr/bin/curl https://$JSSURL/api/v1/auth/token --silent --request POST --header "Authorization: Basic ${encodedCredentials}")
+	# Read the output, extract the token information and store the token information as a variable in a script:
+
+    # Parse the returned output for the bearer token and store the bearer token as a variable.
+
+    if [[ $(/usr/bin/sw_vers -productVersion | awk -F . '{print $1}') -lt 12 ]]; then
+        apiToken=$(/usr/bin/awk -F \" 'NR==2{print $4}' <<< "$authToken" | /usr/bin/xargs)
+    else
+        #raw output format introduced to plutil in macOS 12
+        apiToken=$(/usr/bin/plutil -extract token raw -o - - <<< "$authToken")
+    fi
+
+    # Verify that the token is valid and unexpired by making a separate API call, checking the HTTP status code and storing status code information as a variable in a script:
+    api_authentication_check=$(/usr/bin/curl --write-out %{http_code} --silent --output /dev/null https://$JSSURL/api/v1/auth --request GET --header "Authorization: Bearer ${apiToken}")	
+}
+
+# Get parameters supplied from a jamf policy
+
+checkCustomParamaters(){
+# Get the parent process command and PID (change to $$ from $PPID to test locally)
+
+
+parentPid=$(ps -o ppid= -p "$PPID")
+parentCmd=$(ps -p ${parentPid} -o command | tail -1)
+
+
+echo "parentPid is $parentPid" >> $logFile
+echo "parentCmd is $parentCmd"  >> $logFile
+# Fetch all the parameters
+# Usage:
+# sudo jamf policy -trigger theNewRecon -at <actionType> -p1 <value1> -p2 <value2> .. <value8>
+# action types and values:
+#   getValues <eaID> 
+#       retrieves possible values for popup extension Attribute type with ID eaID for machine 
+#       calling the script in file located at /tmp/jamf/formattedChoices.txt on the 
+#       executing computer and the eaName to /tmp/jamf/eaName.txt
+#   setValue <eaID> <valueToWrite>: 
+#       changes the referenced Extension attribute value for a computer with SN machineSN to valueToWrite
+
+# action type Value
+if [[ -n $(echo ${parentCmd} | grep '\-p0') ]]; then
+    actionType=$(echo ${parentCmd} | awk -F"-p0 " '{print $2}' | awk -F"-p[0-9] " '{print $1}')
+    # strip trailing spaces
+    actionType=$(echo "$actionType" | xargs)
+
+    echo "action type value is ${actionType}" > $logFile
+fi
+
+# P1 Value
+if [[ -n $(echo ${parentCmd} | grep '\-p1') ]]; then
+    eaID=$(echo ${parentCmd} | awk -F"-p1 " '{print $2}' | awk -F"-p[0-9] " '{print $1}')
+    # strip trailing spaces
+    eaID=$(echo "$eaID" | xargs )
+    echo "eaID is ${eaID}" >> $logFile
+fi
+
+# P2 Value
+if [[ -n $(echo ${parentCmd} | grep '\-p2') ]]; then
+   	eaValue=$(echo ${parentCmd} | awk -F"-p2 " '{print $2}' | awk -F"-p[0-9] " '{print $1}')
+   	# strip trailing spaces
+    eaaValue=$(echo "eaValue" | xargs )
+    echo "eaValue is ${eaValue}" >> $logFile
+fi
+
+# P3 Value
+if [[ -n $(echo ${parentCmd} | grep '\-p3') ]]; then
+    eaName=$(echo ${parentCmd} | awk -F"-p3 " '{print $2}' | awk -F"-p[0-9] " '{print $1}')
+    echo "eaName is ${eaName}" >> $logFile
+fi
+
+# P4 Value
+if [[ -n $(echo ${parentCmd} | grep '\-p4') ]]; then
+    p5Value=$(echo ${parentCmd} | awk -F"-p4 " '{print $2}' | awk -F"-p[0-9] " '{print $1}')
+    echo "P5 value is ${p5Value}" >> $logFile
+fi
+
+# P5 Value
+if [[ -n $(echo ${parentCmd} | grep '\-p5') ]]; then
+    p6Value=$(echo ${parentCmd} | awk -F"-p5 " '{print $2}' | awk -F"-p[0-9] " '{print $1}')
+    echo "P6 value is ${p2Value}" >> $logFile
+fi
+
+# P6 Value
+if [[ -n $(echo ${parentCmd} | grep '\-p6') ]]; then
+    p7Value=$(echo ${parentCmd} | awk -F"-p6 " '{print $2}' | awk -F"-p[0-9] " '{print $1}')
+    echo "P7 value is ${p7Value}" >> $logFile
+fi
+
+# P7 Value
+if [[ -n $(echo ${parentCmd} | grep '\-p7') ]]; then
+    p8Value=$(echo ${parentCmd} | awk -F"-p7 " '{print $2}' | awk -F"-p[0-9] " '{print $1}')
+    echo "P8 value is ${p8Value}" >> $logFile
+fi
+
+# P8 Value
+if [[ -n $(echo ${parentCmd} | grep '\-p8') ]]; then
+    p9Value=$(echo ${parentCmd} | awk -F"-p8 " '{print $2}' | awk -F"-p[0-9] " '{print $1}')
+    echo "P9 value is ${p9Value}" >> $logFile
+fi
+}
+echo "beginning theNewRecon $(date)" > $logFile
+echo "It is $(date)" >> $logFile
+checkCustomParamaters
+getBearerToken
+
+
+if [[ $api_authentication_check == 200 ]]; then
+
+    echo "Executing $actionType for EA with ID $eaID for computer with serial number $sn" >> $logFile
+
+    if [[ "$actionType" == "getValues" ]]; then
+
+        choices=$(curl -H "Accept: text/xml" --header "Authorization: Bearer ${apiToken}" "https://$JSSURL/JSSResource/computerextensionattributes/id/$eaID" | xmllint --format -)
+
+        # trim XML tags 
+        formattedChoices=$(echo $choices | awk 'BEGIN {FS="<popup_choices>"}; {print $2}' | awk ' BEGIN {FS="</popup_choices>"}; {print $1}' | sed -e 's/<choice>/""/g;s/<\/choice>//g;s/\"\"/"\n"/g;s/\"//g'  )
+        eaName=$(echo $choices | awk 'BEGIN {FS="<name>"}; {print $2}' | awk 'BEGIN {FS="</name>"}; {print $1}' | tr -d "\n")
+        echo "Getting values for extension attribute $eaName with ID $eaID" >> $logFile
+        if [[ ! -e /tmp/jamf/ ]]; then
+            mkdir /tmp/jamf/
+        fi
+        echo "$formattedChoices" > /tmp/jamf/formattedChoices.txt
+        echo "$eaName" > /tmp/jamf/eaName.txt
+    elif [[ "$actionType" == "setValue" ]]; then
+        if [[ -e /tmp/jamf/eaName.txt ]]; then
+            eaName=$(cat /tmp/jamf/eaName.txt)
+        fi
+        echo "Setting value for extension attribute $eaName with ID $eaID" >> $logFile
+        JSSHostname="https://$JSSURL/JSSResource/computers/serialnumber/$sn/subset/extension_attributes"
+
+        XMLTOWRITE="<computer><extension_attributes><extension_attribute><id>$eaID</id><name>$eaName</name><type>String</type><value>$eaValue</value></extension_attribute></extension_attributes></computer>"													
+
+        #change extension attribute
+        curl --header "Authorization: Bearer ${apiToken}"  -X "PUT" "$JSSHostname" \
+            -H "Content-Type: application/xml" \
+            -H "Accept: application/xml" \
+            -d "$XMLTOWRITE"
+    else
+        echo "unknown action type" >> $logFile
+        exit 0;
+    fi
+else
+    echo "Failed to get Bearer Token" >> $logFile
+    exit 401;
+fi
+
+exit 0
