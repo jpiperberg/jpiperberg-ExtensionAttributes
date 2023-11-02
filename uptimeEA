@@ -13,11 +13,16 @@ if [[ $(echo $timeSinceLastReboot | grep "days") != "" ]]; then
 
 	echo "<result>up $days days, $hoursMinutes as of $currentDateTime</result>"
 
-
-else
+elif [[ $(echo $timeSinceLastReboot | grep "hours") != "" ]]; then
 	# up less than 1 day
 	# format uptime string based on hours of uptime
 	hoursMinutes=$(echo $timeSinceLastReboot | awk '{print $3}' | sed 's/,//g' | awk  'BEGIN {FS=":"}; {print $1 " hours and " $2 " minutes"}')
+
+	echo "<result>up $hoursMinutes as of $currentDateTime</result>"
+else
+	# up less than one hour
+    	# format based on minutes of uptime
+	hoursMinutes=$(echo $timeSinceLastReboot | awk '{print $3}' | sed 's/,//g' | awk  'BEGIN {FS=":"}; {print $1 " minutes"}')
 
 	echo "<result>up $hoursMinutes as of $currentDateTime</result>"
 fi
