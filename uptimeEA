@@ -21,9 +21,9 @@ elif [[ $(echo $timeSinceLastReboot | grep "hours") != "" ]]; then
 	echo "<result>up $hoursMinutes as of $currentDateTime</result>"
 else
 	# up less than one hour
-    # format based on minutes of uptime
-	minutes=$(echo $timeSinceLastReboot | awk '{print $3}' | sed 's/,//g' | awk  'BEGIN {FS=":"}; {print $1 " minutes"}')
+    	# format based on minutes of uptime
+	hoursMinutes=$(echo $timeSinceLastReboot | awk '{print $3}' | sed 's/,//g' | awk  'BEGIN {FS=":"}; {print $1 " minutes"}')
 
-	echo "<result>up $minutes as of $currentDateTime</result>"
+	echo "<result>up $hoursMinutes as of $currentDateTime</result>"
 fi
 
